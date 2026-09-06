@@ -10,7 +10,7 @@ def only_numbers(input_string):
             print("Please enter a valid number between your choices.")
 
 
-def main():
+def display_menu():
     print(
         """  ===== EXPENSE MANAGEMENT SYSTEM =====
 
@@ -24,10 +24,17 @@ def main():
         8. Save
         9. Exit""")
 
-    input_choice = only_numbers("Choose you option (1-9): ")
 
-    if input_choice == 9:
-        print("Thank you for using the Expense Management System. Goodbye!")
+def main():
+    while True:
+
+        display_menu()
+
+        input_choice = only_numbers("Choose your option (1-9): ")
+
+        if input_choice == 9:
+            print("Thank you for using the Expense Management System. Goodbye!")
+            break
 
 
 if __name__ == "__main__":
