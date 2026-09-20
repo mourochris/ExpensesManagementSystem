@@ -1,6 +1,7 @@
 import string
 import random
 from datetime import datetime
+import json
 
 
 def take_only_float(input_string):
@@ -48,6 +49,20 @@ def generate_id(expenses_manager):
     return new_id
 
 
+def save_expenses(expenses_manager):
+    with open("expenses.json", "w") as file:
+        json.dump(expenses_manager, file)
+
+
+def load_expenses():
+    try:
+        with open("expenses.json", "r") as file:
+            expenses_manager = json.load(file)
+        return expenses_manager
+    except FileNotFoundError:
+        return []
+
+
 def add_expenses(expenses_manager):
     amount = take_only_float("Please enter the expense amount: ")
     description = input(
@@ -59,6 +74,19 @@ def add_expenses(expenses_manager):
     new_expense = {"id": new_id, "amount": amount,
                    "description": description, "date": date, "category": category}
     expenses_manager.append(new_expense)
+
+
+def show_all_expenses(expenses_manager):
+    if not expenses_manager:
+        print("There are no stored expenses at the moment.")
+        return
+    for expense in expenses_manager:
+        print(f"""ID: {expense["id"]}
+Amount: {expense["amount"]:.2f}€
+Description: {expense["description"]}
+Date: {expense["date"]}
+Category: {expense["category"]}
+              """)
 
 
 def display_menu():
@@ -77,15 +105,20 @@ def display_menu():
 
 
 def main():
-    expenses_manager = []
-    while True:
+    expenses_manager = load_expenses()
+    display_menu()
 
-        display_menu()
+    while True:
 
         input_choice = valid_menu_choices("Choose your option (1-9): ")
 
         if input_choice == 1:
             add_expenses(expenses_manager)
+            save_expenses(expenses_manager)
+        elif input_choice == 2:
+            show_all_expenses(expenses_manager)
+        elif input_choice == 8:
+            save_expenses(expenses_manager)
         elif input_choice == 9:
             print("Thank you for using the Expense Management System. Goodbye!")
             break
