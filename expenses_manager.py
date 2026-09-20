@@ -37,6 +37,28 @@ def valid_menu_choices(input_string):
             print("Please enter a valid number between your choices.")
 
 
+def check_if_data_exists(expenses_manager):
+    if not expenses_manager:
+        print("There are no stored expenses at the moment.")
+        return True
+
+
+def absense_of_category(expenses_manager, certain_category):
+    for expense in expenses_manager:
+        if certain_category in expense["category"]:
+            return False
+    return True
+
+
+def expense_display(expense):
+    print(f"""ID: {expense["id"]}
+Amount: {expense["amount"]:.2f}€
+Description: {expense["description"]}
+Date: {expense["date"]}
+Category: {expense["category"]}
+              """)
+
+
 def generate_id(expenses_manager):
     characters = string.ascii_uppercase + string.digits
     while True:
@@ -77,16 +99,27 @@ def add_expenses(expenses_manager):
 
 
 def show_all_expenses(expenses_manager):
-    if not expenses_manager:
-        print("There are no stored expenses at the moment.")
+    data_absense = check_if_data_exists(expenses_manager)
+    if data_absense:
         return
     for expense in expenses_manager:
-        print(f"""ID: {expense["id"]}
-Amount: {expense["amount"]:.2f}€
-Description: {expense["description"]}
-Date: {expense["date"]}
-Category: {expense["category"]}
-              """)
+        expense_display(expense)
+
+
+def show_expenses_by_category(expenses_manager):
+    data_absense = check_if_data_exists(expenses_manager)
+    if data_absense:
+        return
+    print_count = 0
+    certain_category = input(
+        "Please enter the certain category you want to inspect: ").title().strip()
+    for expense in expenses_manager:
+        if certain_category == expense["category"]:
+            expense_display(expense)
+            print_count += 1
+    if not print_count:
+        print(
+            f"There is no {certain_category} categorie in the list at the moment")
 
 
 def display_menu():
@@ -117,6 +150,8 @@ def main():
             save_expenses(expenses_manager)
         elif input_choice == 2:
             show_all_expenses(expenses_manager)
+        elif input_choice == 3:
+            show_expenses_by_category(expenses_manager)
         elif input_choice == 8:
             save_expenses(expenses_manager)
         elif input_choice == 9:
