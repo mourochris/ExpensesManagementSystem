@@ -18,11 +18,24 @@ def take_only_float(input_string):
 def get_date():
     while True:
         try:
-            date = input("Please enter the date of the expense (dd-mm-YYYY): ")
+            date = input(
+                "Please enter the date of the expense (dd-mm-YYYY): ")
             datetime.strptime(date, "%d-%m-%Y")
             return date
         except ValueError:
             print("Please provide a valid date.")
+
+
+def get_month_year():
+    while True:
+        try:
+            input_year = input("Year(YYYY): ")
+            input_month = input("Month(mm): ")
+            input_year = datetime.strptime(input_year, "%Y")
+            input_month = datetime.strptime(input_month, "%m")
+            return input_year.year, input_month.month
+        except ValueError:
+            print("Please provide valid dates.")
 
 
 def valid_menu_choices(input_string):
@@ -41,13 +54,6 @@ def check_if_data_exists(expenses_manager):
     if not expenses_manager:
         print("There are no stored expenses at the moment.")
         return True
-
-
-def absense_of_category(expenses_manager, certain_category):
-    for expense in expenses_manager:
-        if certain_category in expense["category"]:
-            return False
-    return True
 
 
 def expense_display(expense):
@@ -85,7 +91,7 @@ def load_expenses():
         return []
 
 
-def add_expenses(expenses_manager):
+def add_expenses(expenses_manager, ):
     amount = take_only_float("Please enter the expense amount: ")
     description = input(
         "Please enter the description of the expense: ").title().strip()
@@ -99,27 +105,49 @@ def add_expenses(expenses_manager):
 
 
 def show_all_expenses(expenses_manager):
-    data_absense = check_if_data_exists(expenses_manager)
-    if data_absense:
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
         return
     for expense in expenses_manager:
         expense_display(expense)
 
 
 def show_expenses_by_category(expenses_manager):
-    data_absense = check_if_data_exists(expenses_manager)
-    if data_absense:
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
         return
-    print_count = 0
+    matches_found = 0
     certain_category = input(
         "Please enter the certain category you want to inspect: ").title().strip()
     for expense in expenses_manager:
         if certain_category == expense["category"]:
             expense_display(expense)
-            print_count += 1
-    if not print_count:
+            matches_found += 1
+    if not matches_found:
         print(
-            f"There is no {certain_category} categorie in the list at the moment")
+            f"There is no {certain_category} category in the list at the moment")
+
+
+def monthly_overview(expenses_manager):
+    total_monthly_amount = 0
+    total_categories_amount = {}
+    input_year, input_month = get_month_year()
+    for expense in expenses_manager:
+        converted_date = datetime.strptime(expense["date"], "%d-%m-%Y")
+        if converted_date.month == input_month and converted_date.year == input_year:
+            total_monthly_amount += expense["amount"]
+            if expense["category"] not in total_categories_amount:
+                total_categories_amount[expense["category"]
+                                        ] = 0
+            total_categories_amount[expense["category"]] += expense["amount"]
+    print(f"""
+===== MONTHLY OVERVIEW OF {input_year}-{input_month}=====
+          """)
+    for category in total_categories_amount:
+        print(f"""{category}: {total_categories_amount[category]:.2f}€""")
+
+    print(f"""Total monthly amount: {total_monthly_amount:.2f}€.
+          """)
 
 
 def display_menu():
@@ -152,6 +180,8 @@ def main():
             show_all_expenses(expenses_manager)
         elif input_choice == 3:
             show_expenses_by_category(expenses_manager)
+        elif input_choice == 4:
+            monthly_overview(expenses_manager)
         elif input_choice == 8:
             save_expenses(expenses_manager)
         elif input_choice == 9:
