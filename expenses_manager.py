@@ -46,7 +46,7 @@ def valid_menu_choices(input_string):
     while True:
         try:
             valid_input = int(input(input_string))
-            if 0 < valid_input <= 9:
+            if 0 < valid_input <= 8:
                 return valid_input
             else:
                 raise ValueError
@@ -145,22 +145,6 @@ def show_all_expenses(expenses_manager):
         expense_display(expense)
 
 
-def show_expenses_by_category(expenses_manager):
-    data_absence = check_if_data_exists(expenses_manager)
-    if data_absence:
-        return
-    matches_found = 0
-    certain_category = input(
-        "Please enter the certain category you want to inspect: ").title().strip()
-    for expense in expenses_manager:
-        if certain_category == expense["category"]:
-            expense_display(expense)
-            matches_found += 1
-    if not matches_found:
-        print(
-            f"There is no {certain_category} category in the list at the moment")
-
-
 def monthly_overview(expenses_manager):
     data_absence = check_if_data_exists(expenses_manager)
     if data_absence:
@@ -245,13 +229,12 @@ def display_menu():
 
         1. Add Expense
         2. Show all Expenses
-        3. Show Expenses by Category
-        4. Monthly Overview
-        5. Category Breakdown
-        6. Expense History
-        7. Delete Expense
-        8. Save
-        9. Exit""")
+        3. Monthly Overview
+        4. Category Breakdown
+        5. Expense History
+        6. Delete Expense
+        7. Save
+        8. Exit""")
 
 
 def main():
@@ -260,7 +243,7 @@ def main():
 
     while True:
 
-        input_choice = valid_menu_choices("Choose your option (1-9): ")
+        input_choice = valid_menu_choices("Choose your option (1-8): ")
 
         if input_choice == 1:
             add_expenses(expenses_manager)
@@ -268,17 +251,15 @@ def main():
         elif input_choice == 2:
             show_all_expenses(expenses_manager)
         elif input_choice == 3:
-            show_expenses_by_category(expenses_manager)
-        elif input_choice == 4:
             monthly_overview(expenses_manager)
-        elif input_choice == 5:
+        elif input_choice == 4:
             creation_choice = category_breakdown(expenses_manager)
             if creation_choice:
                 add_expenses(expenses_manager)
                 save_expenses(expenses_manager)
-        elif input_choice == 8:
+        elif input_choice == 7:
             save_expenses(expenses_manager)
-        elif input_choice == 9:
+        elif input_choice == 8:
             print("Thank you for using the Expense Management System. Goodbye!")
             break
 
