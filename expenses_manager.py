@@ -26,14 +26,18 @@ def get_date():
             print("Please provide a valid date.")
 
 
-def get_month_year():
+def get_month_year(choice):
     while True:
         try:
-            input_year = input("Year(YYYY): ")
-            input_month = input("Month(mm): ")
-            input_year = datetime.strptime(input_year, "%Y")
-            input_month = datetime.strptime(input_month, "%m")
-            return input_year.year, input_month.month
+            if choice == "month_year":
+                input_year_month = input("Year-month(YYYY-mm): ")
+                input_year_month = datetime.strptime(input_year_month, "%Y-%m")
+                return input_year_month
+            else:
+                input_year = input("Year(YYYY): ")
+                input_year = datetime.strptime(
+                    f"{input_year}-12-31", "%Y-%m-%d")
+                return input_year
         except ValueError:
             print("Please provide valid dates.")
 
@@ -54,6 +58,35 @@ def check_if_data_exists(expenses_manager):
     if not expenses_manager:
         print("There are no stored expenses at the moment.")
         return True
+
+
+def yes_no_answer(expresion):
+    valid_choices = ["y", "n"]
+    while True:
+        choice = input(expresion).lower().strip()
+        if choice not in valid_choices:
+            print("Please enter a valid choice.")
+        else:
+            return choice
+
+
+def category_input(expenses_manager):
+    no_matches = 0
+    prefered_category = input(
+        "Please enter the prefered category: ").title().strip()
+    for expense in expenses_manager:
+        if prefered_category == expense["category"]:
+            return prefered_category
+        else:
+            no_matches += 1
+    if no_matches == len(expenses_manager):
+        creation_choice = yes_no_answer(
+            f"There are no matching category results with '{prefered_category}'. Do you want to create a new expense with this category? (y/n): ")
+        if creation_choice == "y":
+            return creation_choice
+        else:
+            print("You are now going back to main menu.")
+            return "n"
 
 
 def expense_display(expense):
@@ -129,25 +162,81 @@ def show_expenses_by_category(expenses_manager):
 
 
 def monthly_overview(expenses_manager):
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
+        return
     total_monthly_amount = 0
     total_categories_amount = {}
-    input_year, input_month = get_month_year()
+    input_year_month = get_month_year("month_year")
     for expense in expenses_manager:
         converted_date = datetime.strptime(expense["date"], "%d-%m-%Y")
-        if converted_date.month == input_month and converted_date.year == input_year:
+        if converted_date.month == input_year_month.month and converted_date.year == input_year_month.year:
             total_monthly_amount += expense["amount"]
             if expense["category"] not in total_categories_amount:
                 total_categories_amount[expense["category"]
                                         ] = 0
             total_categories_amount[expense["category"]] += expense["amount"]
     print(f"""
-===== MONTHLY OVERVIEW OF {input_year}-{input_month}=====
+===== MONTHLY OVERVIEW OF {input_year_month.year}-{input_year_month.month}=====
           """)
     for category in total_categories_amount:
         print(f"""{category}: {total_categories_amount[category]:.2f}€""")
 
     print(f"""Total monthly amount: {total_monthly_amount:.2f}€.
           """)
+
+
+def category_breakdown(expenses_manager):
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
+        return
+    continue_choice = ""
+    current_date = datetime.now()
+    prefered_category = category_input(expenses_manager)
+    if prefered_category == "y":
+        return True
+    elif prefered_category == "n":
+        return
+
+    while True:
+        if continue_choice == "y":
+            current_date = year_of_choice
+        yearly_total_amount = 0
+        categorized_expenses = []
+        for expense in expenses_manager:
+            expense_date = datetime.strptime(expense["date"], "%d-%m-%Y")
+            if expense["category"] == prefered_category and current_date.year == expense_date.year and current_date >= expense_date:
+                yearly_total_amount += expense["amount"]
+                categorized_expenses.append(expense)
+        if categorized_expenses:
+            for month in range(1, 13):
+                converted_month = datetime.strptime(str(month), "%m").month
+                monthly_expenses = []
+                monthly_total_amount = 0
+                for expense in categorized_expenses:
+                    expense_date = datetime.strptime(
+                        expense["date"], "%d-%m-%Y")
+                    if converted_month == expense_date.month:
+                        monthly_total_amount += expense["amount"]
+                        monthly_expenses.append(expense)
+                if monthly_total_amount:
+                    print(f"""
+===== EXPENSES OF {converted_month}-{expense_date.year} =====
+                      """)
+                    for expense in monthly_expenses:
+                        expense_display(expense)
+                    print(f"Total Monthly amount: {monthly_total_amount:.2f}€")
+            print(f"""
+=======================================================
+    Total Yearly amount: {yearly_total_amount:.2f}€""")
+        else:
+            print(
+                f"There are no expenses in the category '{prefered_category}' for the year {current_date.year}.")
+        continue_choice = yes_no_answer(
+            "Do you want to inspect the category for another year?(y/n): ")
+        if continue_choice == "n":
+            break
+        year_of_choice = get_month_year("year")
 
 
 def display_menu():
@@ -182,6 +271,11 @@ def main():
             show_expenses_by_category(expenses_manager)
         elif input_choice == 4:
             monthly_overview(expenses_manager)
+        elif input_choice == 5:
+            creation_choice = category_breakdown(expenses_manager)
+            if creation_choice:
+                add_expenses(expenses_manager)
+                save_expenses(expenses_manager)
         elif input_choice == 8:
             save_expenses(expenses_manager)
         elif input_choice == 9:
