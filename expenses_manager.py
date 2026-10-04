@@ -33,11 +33,15 @@ def get_month_year(choice):
                 input_year_month = input("Year-month(YYYY-mm): ")
                 input_year_month = datetime.strptime(input_year_month, "%Y-%m")
                 return input_year_month
-            else:
+            elif choice == "year":
                 input_year = input("Year(YYYY): ")
                 input_year = datetime.strptime(
                     f"{input_year}-12-31", "%Y-%m-%d")
                 return input_year
+            elif choice == "month":
+                input_month = input("Month(mm): ")
+                input_month = datetime.strptime(input_month, "%m")
+                return input_month
         except ValueError:
             print("Please provide valid dates.")
 
@@ -124,6 +128,11 @@ def load_expenses():
         return []
 
 
+def sort_expenses(expenses_manager):
+    expenses_manager.sort(key=lambda expense: datetime.strptime(
+        expense["date"], "%d-%m-%Y"), reverse=True)
+
+
 def add_expenses(expenses_manager, ):
     amount = take_only_float("Please enter the expense amount: ")
     description = input(
@@ -135,6 +144,47 @@ def add_expenses(expenses_manager, ):
     new_expense = {"id": new_id, "amount": amount,
                    "description": description, "date": date, "category": category}
     expenses_manager.append(new_expense)
+
+
+def browse_expenses(expenses_manager):
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
+        return
+    input_year = get_month_year("year")
+    choice_for_month = yes_no_answer(
+        f"Do you want a specific month in the year {input_year.year}?(y/n): ")
+    total_amount = 0
+    if choice_for_month == "y":
+        input_month = get_month_year("month")
+        print(f"""
+===== Expenses of {input_month.strftime("%B")} {input_year.year} =====
+                   """)
+    else:
+        print(f"""
+===== Expenses of {input_year.year} =====
+                   """)
+    for expense in expenses_manager:
+        expense_date = datetime.strptime(expense["date"], "%d-%m-%Y")
+        matches_year = False
+        matches_month = False
+        if input_year.year == expense_date.year:
+            matches_year = True
+        if choice_for_month == "y" and input_month.month == expense_date.month:
+            matches_month = True
+        if matches_year and (choice_for_month == "n" or matches_month):
+            total_amount += expense["amount"]
+            expense_display(expense)
+    if choice_for_month == "y":
+        if total_amount:
+            print(f"Total monthly amount: {total_amount:.2f}€")
+        else:
+            print(
+                f"The month {input_month.strftime("%B")} has no recorded expenses.")
+    else:
+        if total_amount:
+            print(f"Total yearly amount: {total_amount:.2f}€")
+        else:
+            print(f"The year {input_year.year} has no recorded expenses.")
 
 
 def show_all_expenses(expenses_manager):
@@ -228,7 +278,7 @@ def display_menu():
         """  ===== EXPENSE MANAGEMENT SYSTEM =====
 
         1. Add Expense
-        2. Show all Expenses
+        2. Browse Expenses
         3. Monthly Overview
         4. Category Breakdown
         5. Expense History
@@ -247,16 +297,20 @@ def main():
 
         if input_choice == 1:
             add_expenses(expenses_manager)
+            sort_expenses(expenses_manager)
             save_expenses(expenses_manager)
         elif input_choice == 2:
-            show_all_expenses(expenses_manager)
+            browse_expenses(expenses_manager)
         elif input_choice == 3:
             monthly_overview(expenses_manager)
         elif input_choice == 4:
             creation_choice = category_breakdown(expenses_manager)
             if creation_choice:
                 add_expenses(expenses_manager)
+                sort_expenses(expenses_manager)
                 save_expenses(expenses_manager)
+        elif input_choice == 5:
+            show_all_expenses(expenses_manager)
         elif input_choice == 7:
             save_expenses(expenses_manager)
         elif input_choice == 8:
