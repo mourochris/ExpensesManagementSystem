@@ -2,6 +2,7 @@ import string
 import random
 from datetime import datetime
 import json
+import re
 
 
 def take_only_float(input_string):
@@ -133,10 +134,33 @@ def sort_expenses(expenses_manager):
         expense["date"], "%d-%m-%Y"), reverse=True)
 
 
+def search_expenses(expenses_manager):
+    filtered_expenses = []
+    while True:
+        prefered_description = re.findall(
+            "[a-z]+", input("Search description: ").lower())
+        if prefered_description:
+            current_date = datetime.now()
+            for expense in expenses_manager:
+                expense_description = re.findall(
+                    "[a-z]+", expense["description"].lower())
+                expense_date = datetime.strptime(expense["date"], "%d-%m-%Y")
+                if expense_date <= current_date:
+                    for description_part in prefered_description:
+                        if description_part not in expense_description:
+                            break
+                    else:
+                        filtered_expenses.append(expense)
+            return filtered_expenses
+
+        else:
+            print("This is not a valid search description.")
+
+
 def add_expenses(expenses_manager, ):
     amount = take_only_float("Please enter the expense amount: ")
     description = input(
-        "Please enter the description of the expense: ").title().strip()
+        "Please enter the description of the expense: ").strip()
     date = get_date()
     category = input(
         "Please enter the category of the expense: ").title().strip()
@@ -273,6 +297,72 @@ def category_breakdown(expenses_manager):
         year_of_choice = get_month_year("year")
 
 
+def analyze_expenses(expenses_manager):
+    data_absence = check_if_data_exists(expenses_manager)
+    if data_absence:
+        return
+    filtered_expenses = search_expenses(expenses_manager)
+    if filtered_expenses:
+        years = []
+        grand_total_amount = sum(expense["amount"]
+                                 for expense in filtered_expenses)
+        while True:
+            yearly_expenses = []
+            for expense in filtered_expenses:
+                expense_date = datetime.strptime(
+                    expense["date"], "%d-%m-%Y")
+                if not yearly_expenses and expense_date.year not in years:
+                    yearly_expenses.append(expense)
+                    years.append(expense_date.year)
+                    yearly_expense_date = datetime.strptime(
+                        yearly_expenses[0]["date"], "%d-%m-%Y")
+                else:
+                    if yearly_expenses:
+                        if expense_date.year == yearly_expense_date.year:
+                            yearly_expenses.append(expense)
+
+            if yearly_expenses:
+                print(f"""
+===== {yearly_expense_date.year} =====
+                      """)
+            else:
+                break
+            total_yearly_amount = 0
+            for month in range(12, 0, -1):
+                total_monthly_amount = 0
+                monthly_expenses = []
+                coverted_month = datetime.strptime(str(month), "%m")
+                for yearly_expense in yearly_expenses:
+                    yearly_expense_date = datetime.strptime(
+                        yearly_expense["date"], "%d-%m-%Y")
+                    if coverted_month.month == yearly_expense_date.month:
+                        total_monthly_amount += yearly_expense["amount"]
+                        monthly_expenses.append(yearly_expense)
+                total_yearly_amount += total_monthly_amount
+                if monthly_expenses:
+                    print(f"""
+> {coverted_month.strftime("%B")}
+                      """)
+                for monthly_expense in monthly_expenses:
+                    print(
+                        f"""{monthly_expense["date"]} | {monthly_expense["description"]} | {monthly_expense["amount"]:.2f}€
+""")
+                if total_monthly_amount:
+                    print(f"Total Monthly amount: {total_monthly_amount:.2f}€")
+            if total_yearly_amount:
+                print(f"""
+===============================
+Total Yearly amount: {total_yearly_amount:.2f}€
+                      """)
+        print(f"""
+======================================================
+Occurrences: {len(filtered_expenses)}
+Grand Total amount: {grand_total_amount:.2f}€
+              """)
+    else:
+        print("There are no matching results for your preferred description. You will now be redirected to the main menu.")
+
+
 def display_menu():
     print(
         """  ===== EXPENSE MANAGEMENT SYSTEM =====
@@ -281,7 +371,7 @@ def display_menu():
         2. Browse Expenses
         3. Monthly Overview
         4. Category Breakdown
-        5. Expense History
+        5. Analyze Expenses
         6. Delete Expense
         7. Save
         8. Exit""")
@@ -310,6 +400,8 @@ def main():
                 sort_expenses(expenses_manager)
                 save_expenses(expenses_manager)
         elif input_choice == 5:
+            analyze_expenses(expenses_manager)
+        elif input_choice == 6:
             show_all_expenses(expenses_manager)
         elif input_choice == 7:
             save_expenses(expenses_manager)
