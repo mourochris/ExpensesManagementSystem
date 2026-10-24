@@ -3,6 +3,7 @@ import random
 from datetime import datetime
 import json
 import re
+import math
 
 
 def deletion_menu_choice():
@@ -28,7 +29,7 @@ def take_only_float(input_string):
     while True:
         try:
             valid_input = float(input(input_string))
-            if valid_input <= 0:
+            if valid_input <= 0 or not math.isfinite(valid_input):
                 raise ValueError
             return valid_input
         except ValueError:
@@ -36,11 +37,17 @@ def take_only_float(input_string):
 
 
 def filter_expenses_by_category(expenses_manager, prefered_category):
-    filtered_expenses = []
+    recorded_expenses = []
+    future_expenses = []
+    now = datetime.now()
     for expense in expenses_manager:
-        if expense["category"] == prefered_category and datetime.strptime(expense["date"], "%d-%m-%Y") <= datetime.now():
-            filtered_expenses.append(expense)
-    return filtered_expenses
+        if expense["category"] == prefered_category:
+            date = datetime.strptime(expense["date"], "%d-%m-%Y")
+            if date <= now:
+                recorded_expenses.append(expense)
+            else:
+                future_expenses.append(expense)
+    return recorded_expenses, future_expenses
 
 
 def filter_expenses_by_date(expenses_manager, input_year, choice_for_month, input_month):
@@ -101,10 +108,33 @@ def valid_menu_choices(input_string):
             print("Please enter a valid number between your choices.")
 
 
+def valid_period_choice(input_string):
+    valid_choices = ["P", "F", "B"]
+    while True:
+        choice = input(input_string).upper().strip()
+        if choice in valid_choices:
+            return choice
+        else:
+            print("Please enter a valid choice.")
+
+
 def check_if_data_exists(expenses_manager):
     if not expenses_manager:
         print("There are no stored expenses at the moment.")
         return True
+
+
+def valid_display_mode(display_mode):
+    valid_choices = ["category_deletion", "date_deletion", "analyze"]
+    try:
+        if display_mode in valid_choices:
+            return True
+        else:
+            raise ValueError(
+                "Unsupported display mode. Please contact the developer to issue a fix.")
+    except ValueError as display_error:
+        print(display_error)
+        return False
 
 
 def yes_no_answer(expresion):
@@ -141,6 +171,13 @@ Amount: {expense["amount"]:.2f}€
 Description: {expense["description"]}
 Date: {expense["date"]}
 Category: {expense["category"]}
+              """)
+
+
+def future_expense_display(future_expenses):
+    print(f"""
+Upcoming expenses found: {len(future_expenses)}
+Upcoming expenses total amount: {sum(expense["amount"] for expense in future_expenses):.2f}€
               """)
 
 
@@ -188,6 +225,10 @@ Total Yearly amount: {total_yearly_amount:.2f}€
 
 
 def display_expenses_summary(matching_expenses, display_mode, show_yearly_total=True):
+    valid_pass = valid_display_mode(display_mode)
+    if not valid_pass:
+        print("This feature is temporarily unavailable. You can use the rest of the features normally.")
+        return False
     if not matching_expenses:
         print("No expenses found to display.")
         return
@@ -217,6 +258,22 @@ def display_expenses_summary(matching_expenses, display_mode, show_yearly_total=
 Occurrences: {len(matching_expenses)}
 Grand Total amount: {grand_total_amount:.2f}€
               """)
+    return True
+
+
+def period_selection_statement(matching_expenses, future_expenses, filter_type):
+    if matching_expenses and future_expenses:
+        period_choice = valid_period_choice(
+            f"There are both past and upcoming expenses in this {filter_type}. In which expenses are you interested? ((past)P/(future)F/ or (both)B): ")
+        if period_choice == "F":
+            return future_expenses
+        elif period_choice == "B":
+            return matching_expenses + future_expenses
+    elif not matching_expenses and future_expenses:
+        return future_expenses
+    elif not matching_expenses and not future_expenses:
+        return False
+    return matching_expenses
 
 
 def generate_id(expenses_manager):
@@ -252,22 +309,26 @@ def sort_expenses(expenses_manager):
 
 def search_expenses(expenses_manager):
     filtered_expenses = []
+    future_expenses = []
     while True:
         prefered_description = re.findall(
             "[a-z]+", input("Search description: ").lower())
         if prefered_description:
-            current_date = datetime.now()
             for expense in expenses_manager:
                 expense_description = re.findall(
                     "[a-z]+", expense["description"].lower())
-                expense_date = datetime.strptime(expense["date"], "%d-%m-%Y")
-                if expense_date <= current_date:
-                    for description_part in prefered_description:
-                        if description_part not in expense_description:
-                            break
-                    else:
+                for description_part in prefered_description:
+                    if description_part not in expense_description:
+                        break
+                else:
+                    current_date = datetime.now()
+                    expense_date = datetime.strptime(
+                        expense["date"], "%d-%m-%Y")
+                    if expense_date <= current_date:
                         filtered_expenses.append(expense)
-            return filtered_expenses
+                    else:
+                        future_expenses.append(expense)
+            return filtered_expenses, future_expenses
 
         else:
             print("This is not a valid search description.")
@@ -373,7 +434,7 @@ def category_breakdown(expenses_manager):
         if continue_choice == "y":
             current_date = year_of_choice
         yearly_total_amount = 0
-        categorized_expenses = filter_expenses_by_category(
+        categorized_expenses, future_expenses = filter_expenses_by_category(
             expenses_manager, prefered_category)
         yearly_categorized_expenses = []
         for expense in categorized_expenses:
@@ -383,18 +444,18 @@ def category_breakdown(expenses_manager):
                 yearly_categorized_expenses.append(expense)
         if yearly_categorized_expenses:
             for month in range(1, 13):
-                converted_month = datetime.strptime(str(month), "%m").month
+                converted_month = datetime.strptime(str(month), "%m")
                 monthly_expenses = []
                 monthly_total_amount = 0
                 for expense in yearly_categorized_expenses:
                     expense_date = datetime.strptime(
                         expense["date"], "%d-%m-%Y")
-                    if converted_month == expense_date.month:
+                    if converted_month.month == expense_date.month:
                         monthly_total_amount += expense["amount"]
                         monthly_expenses.append(expense)
                 if monthly_total_amount:
                     print(f"""
-===== EXPENSES OF {converted_month}-{expense_date.year} =====
+===== EXPENSES OF {converted_month.strftime('%B')}-{expense_date.year} =====
                       """)
                     for expense in monthly_expenses:
                         expense_display(expense)
@@ -404,7 +465,11 @@ def category_breakdown(expenses_manager):
     Total Yearly amount: {yearly_total_amount:.2f}€""")
         else:
             print(
-                f"There are no expenses in the category '{prefered_category}' for the year {current_date.year}.")
+                f"There are no expenses in the category '{prefered_category}' for the year {current_date.year} until now.")
+        if current_date.year == datetime.now().year:
+            if future_expenses:
+                print(f"""
+You have {len(future_expenses)} upcoming expenses in the category '{prefered_category}' worth a total amount of {sum(expense["amount"] for expense in future_expenses):.2f}€.""")
         continue_choice = yes_no_answer(
             "Do you want to inspect the category for another year?(y/n): ")
         if continue_choice == "n":
@@ -416,9 +481,18 @@ def analyze_expenses(expenses_manager):
     data_absence = check_if_data_exists(expenses_manager)
     if data_absence:
         return
-    filtered_expenses = search_expenses(expenses_manager)
+    filtered_expenses, future_expenses = search_expenses(expenses_manager)
     if filtered_expenses:
-        display_expenses_summary(filtered_expenses, "analyze")
+        executed = display_expenses_summary(filtered_expenses, "analyze")
+        if not executed:
+            return
+        if future_expenses:
+            future_expense_display(future_expenses)
+    elif not filtered_expenses and future_expenses:
+        print("Recorded expenses not found.")
+        future_expense_display(future_expenses)
+    else:
+        print("No matching expenses were found.")
 
 
 def delete_expense(expenses_manager):
@@ -430,7 +504,9 @@ def delete_expense(expenses_manager):
         id_selection = input("Unique ID: ").strip()
         matching_expense = find_expense_by_id(expenses_manager, id_selection)
         if matching_expense:
-            print("Your maching expense: ")
+            print("""
+Your matching expense:
+                  """)
             expense_display(matching_expense)
             matching_expenses = [matching_expense]
         else:
@@ -438,12 +514,26 @@ def delete_expense(expenses_manager):
             return False
     elif deletion_choice == "2":
         input_year = get_month_year("year")
+        yearly_matches = filter_expenses_by_date(
+            expenses_manager, input_year, "n", None)
+        if not yearly_matches:
+            print(
+                f"There are no matching expenses for the year {input_year.year}")
+            return False
         choice_for_month = yes_no_answer(
             f"Do you want a specific month in the year {input_year.year}?(y/n): ")
         if choice_for_month == "y":
             input_month = get_month_year("month")
         matching_expenses = filter_expenses_by_date(
             expenses_manager, input_year, choice_for_month, input_month if choice_for_month == "y" else None)
+        current_date = datetime.now()
+        if input_year.year == current_date.year:
+            recorded_expenses = [expense for expense in matching_expenses if datetime.strptime(
+                expense["date"], "%d-%m-%Y") <= current_date]
+            future_expenses = [expense for expense in matching_expenses if datetime.strptime(
+                expense["date"], "%d-%m-%Y") > current_date]
+            matching_expenses = period_selection_statement(
+                recorded_expenses, future_expenses, "date range")
         if not matching_expenses:
             if choice_for_month == "y":
                 print(
@@ -451,23 +541,33 @@ def delete_expense(expenses_manager):
             else:
                 print(f"There are no expenses recorded in {input_year.year}.")
             return False
-        display_expenses_summary(
+        executed = display_expenses_summary(
             matching_expenses, "date_deletion", show_yearly_total=(choice_for_month == "n"))
+        if not executed:
+            return False
     elif deletion_choice == "3":
         deletion_catecory = category_input(expenses_manager)
-        matching_expenses = filter_expenses_by_category(
+        matching_expenses, future_expenses = filter_expenses_by_category(
             expenses_manager, deletion_catecory)
+        matching_expenses = period_selection_statement(
+            matching_expenses, future_expenses, "category")
         if not matching_expenses:
-            print(
-                f"No eligible expenses found for category '{deletion_catecory}'.")
+            print(f"No eligible expenses found for this category.")
             return False
-        display_expenses_summary(matching_expenses, "category_deletion")
+        executed = display_expenses_summary(
+            matching_expenses, "category_deletion")
+        if not executed:
+            return False
     elif deletion_choice == "4":
-        matching_expenses = search_expenses(expenses_manager)
+        matching_expenses, future_expenses = search_expenses(expenses_manager)
+        matching_expenses = period_selection_statement(
+            matching_expenses, future_expenses, "description")
         if not matching_expenses:
-            print("No matching expenses found for the provided description.")
+            print(f"No eligible expenses found for this description.")
             return False
-        display_expenses_summary(matching_expenses, "date_deletion")
+        executed = display_expenses_summary(matching_expenses, "date_deletion")
+        if not executed:
+            return False
     else:
         return False
     if matching_expenses:
@@ -499,7 +599,6 @@ def display_menu():
 def main():
     expenses_manager = load_expenses()
     display_menu()
-
     while True:
 
         input_choice = valid_menu_choices("Choose your option (1-8): ")
@@ -526,6 +625,7 @@ def main():
                 save_expenses(expenses_manager)
         elif input_choice == 7:
             save_expenses(expenses_manager)
+            print("Your expenses are successfully saved.")
         elif input_choice == 8:
             print("Thank you for using the Expense Management System. Goodbye!")
             break
