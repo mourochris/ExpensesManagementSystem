@@ -100,7 +100,7 @@ def valid_menu_choices(input_string):
     while True:
         try:
             valid_input = int(input(input_string))
-            if 0 < valid_input <= 8:
+            if 0 < valid_input <= 7:
                 return valid_input
             else:
                 raise ValueError
@@ -592,8 +592,7 @@ def display_menu():
         4. Category Breakdown
         5. Analyze Expenses
         6. Delete Expense
-        7. Save
-        8. Exit""")
+        7. Exit""")
 
 
 def main():
@@ -601,7 +600,7 @@ def main():
     display_menu()
     while True:
 
-        input_choice = valid_menu_choices("Choose your option (1-8): ")
+        input_choice = valid_menu_choices("Choose your option (1-7): ")
 
         if input_choice == 1:
             add_expenses(expenses_manager)
@@ -624,9 +623,6 @@ def main():
             if changes_made:
                 save_expenses(expenses_manager)
         elif input_choice == 7:
-            save_expenses(expenses_manager)
-            print("Your expenses are successfully saved.")
-        elif input_choice == 8:
             print("Thank you for using the Expense Management System. Goodbye!")
             break
 
